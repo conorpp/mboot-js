@@ -1,0 +1,37 @@
+{
+  "name": "mboot",
+  "version": "1.0.0",
+  "description": "Library for using NXP bootloaders",
+  "main": "index.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpileOnly ./src/index.ts --vid 0x1fc9 --pid 0x21",
+    "prod": "tsc && node ./build/app.js",
+    "tsc": "tsc"
+  },
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/conorpp/mboot-js.git"
+  },
+  "keywords": [
+    "NXP",
+    "MCUBOOT",
+    "LPC55"
+  ],
+  "author": "Conor Patrick",
+  "bugs": {
+    "url": "https://github.com/conorpp/mboot-js/issues"
+  },
+  "homepage": "https://github.com/conorpp/mboot-js#readme",
+  "dependencies": {
+    "@types/node-hid": "^1.2.0",
+    "node-hid": "^1.2.0",
+    "ts-node-dev": "^1.0.0-pre.44",
+    "typescript": "^3.8.3",
+    "yargs": "^15.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^13.13.2",
+    "@types/yargs": "^15.0.4"
+  }
+}
