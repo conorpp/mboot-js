@@ -37,9 +37,10 @@ function decodeReport(data: Uint8Array): Uint8Array{
     return data
 }
 export abstract class Hid {
-
     abstract async read(a?: number): Promise<Uint8Array>;
     abstract async write(reportId: number, a: Uint8Array): Promise<number>;
+
+    abstract close(): any;
 }
 
 export class NodeHid extends Hid {
@@ -56,13 +57,18 @@ export class NodeHid extends Hid {
 
     async write(reportId: number, a: Uint8Array, ): Promise<number> {
         let buf = encodeReport(reportId, 64, a)
-        console.log('<<', toHex(buf))
 
-        return this.dev.write(
+        var count = this.dev.write(
             Buffer.from(
                 buf
             )
-        );
-            // this.dev.write(Buffer.from(a))
+        ) - 1 - 4;  // -1 because nodehid returns an extra 1, and -4 for the report header
+
+        console.log('<<(' + (count + 4) + ')', toHex(buf));
+        return count;
+    }
+
+    close(): any {
+        this.dev.close()
     }
 }

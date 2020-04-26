@@ -56,7 +56,7 @@ export enum Property {
     MaxPacketSize= 0x0b,
     ReservedRegions= 0x0c,
     ValidateRegions= 0x0d,
-    RamStartAdress= 0x0e,
+    RamStartAddress= 0x0e,
     RamSize= 0x0f,
     SystemDeviceIdent= 0x10,
     FlashSecurityState= 0x11,
@@ -109,7 +109,6 @@ export class Params {
 
     toBytes (): Uint8Array {
         let buf = new Uint8Array(this.params.length * 4);
-        console.log(buf)
         let dataview = new DataView(buf.buffer);
         this.params.forEach((p,i) => {
             dataview.setUint32(i, p, true);
@@ -119,7 +118,8 @@ export class Params {
     static fromBytes (bytes: Uint8Array): Params {
         let dataview = new DataView(bytes.buffer);
         var params: number[] = new Array();
-        for (var i = 0; i < bytes.length/4; i++) {
+        for (var i = 0; i < bytes.length; i += 4) {
+            // console.log(i + '/' + (bytes.length/4) + ' ' + bytes.length,dataview.getUint32(i, true) )
             params.push(dataview.getUint32(i, true));
         }
         return new Params(params)
@@ -134,7 +134,8 @@ export class CommandPacket {
         this.params = params;
     }
 
-    static build(tag: number, flags: number, params: number[]): CommandPacket {
+    static build(tag: number, flags: number, params?: number[]): CommandPacket {
+        params = params || []
         return new CommandPacket( 
             new Header(tag, flags, params.length ),
             new Params(params),
@@ -165,6 +166,8 @@ export class BaseResponse {
     static fromBytes(bytes: Uint8Array): BaseResponse {
         let header = Header.fromBytes(bytes.slice(0,4))
         let params = Params.fromBytes(bytes.slice(4,))
+        // console.log(bytes.slice(4,).buffer)
+        // console.log(params)
         return new BaseResponse(header, params)
     }
     toBytes(): Uint8Array {

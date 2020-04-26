@@ -27,14 +27,19 @@ function open_device(vid: number, pid: number) {
 console.log(argv.vid)
 console.log(argv.pid)
 
-var dev = new NodeHid(argv.vid, argv.pid)
-
-var client = new Client(dev)
-
 async function run () {
+    var dev = new NodeHid(argv.vid, argv.pid)
+    var client = new Client(dev)
 
     var prop = await client.getProperty(Property.CurrentVersion)
-    console.log('prop',prop)
+    console.log('prop',prop[0].toString(16))
+
+
+    var mems = await client.getMemories()
+    console.log('memories',mems)
+
+    var reset = await client.reset()
+    console.log('reset ',reset)
 
 }
 run()
