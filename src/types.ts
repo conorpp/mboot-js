@@ -40,6 +40,84 @@ export enum ErrorCode {
     InvalidArgument = 4,
     Timeout = 5,
     NoTransferInProgress = 6,
+
+    FlashSizeError = 100,
+    FlashAlignmentError = 101,
+    FlashAddressError = 102,
+    FlashAccessError = 103,
+    FlashProtectionViolation = 104,
+    FlashCommandFailure = 105,
+    FlashUnknownProperty = 106,
+    FlashRegionExecuteOnly = 108,
+    FlashExecInRamNotReady = 109,
+    FlashCommandNotSupported = 111,
+    FlashOutOfDateCFPAPage = 132,
+
+    I2cTxUnderrun = 200,
+    I2cRxOverrun = 201,
+    I2cArbitrationLost = 202,
+
+    SpiTxUnderrun = 300,
+    SpiRxOverrun = 301,
+
+    QspiFlashSizeError = 400,
+    QspiFlashAlignmentError = 401,
+    QspiFlashAddressError = 402,
+    QspiFlashCommandError = 403,
+    QspiFlashUnknownProperty = 404,
+    QspiNotConfigured = 405,
+    QspiCommandNotSupported = 406,
+    QspiCommandTimeout = 407,
+    QspiWriteFailure = 408,
+
+    OtfadSecurityViolation = 500,
+    OtfadLogicallyDisabled = 501,
+    OtfadInvalidKey = 502,
+    OtfadInvalidKeyBlob = 503,
+
+    UnknownCommand = 10000,
+    SecurityViolation = 10001,
+    AbortDataPhase = 10002,
+    PingError = 10003,
+    NoResponse = 10004,
+    NoResponseExpected = 10005,
+    UnsupportedCommand = 10006,
+
+    SbSectionOverrun = 10100,
+    SbSignatureBad = 10101,
+    SbSectionLength = 10102,
+    SbUnencryptedOnly = 10103,
+    Sb_EOF_Reached = 10104,
+    SbChecksumBad = 10105,
+    SbCrc32Bad = 10106,
+    SbUnknownCommand = 10107,
+    SbIdNotFound = 10108,
+    SbDataUnderrun = 10109,
+    SbJumpReturned = 10110,
+    SbCallFailed = 10111,
+    SbKeyNotFound = 10112,
+    SbSecureOnly = 10113,
+    SbResetReturned = 10114,
+    SbRollbackBlocked = 10115,
+    SbInvalidSectionMacCount = 10116,
+    SbUnexpectedCommand = 10117,
+
+    MemoryRangeInvalid = 10200,
+    MemoryReadFailed = 10201,
+    MemoryWriteFailed = 10202,
+    MemoryCulmulativeWrite = 10203,
+    MemoryNotConfigured = 10205,
+
+    UnknownProperty = 10300,
+    ReadOnlyProperty = 10301,
+    InvalidPropertyValue = 10302,
+
+    AppCrcPassed = 10400,
+    AppCrcFailed = 10401,
+    AppCrcInactive = 10402,
+    AppCrcInvalid = 10403,
+    AppCrcOutOfRange = 10404,
+
 }
 
 export enum Property {
@@ -72,8 +150,13 @@ export enum Property {
     FlashPageSize= 0x1b,
     IrqNotifierPin= 0x1c,
     PfrKeyStoreUpdateOpt= 0x1d,
+}
 
-
+export enum ReportId {
+    CommandOut = 0x01,
+    DataOut = 0x02,
+    CommandIn = 0x03,
+    DataIn = 0x04,
 }
 
 export class Header {
@@ -111,7 +194,7 @@ export class Params {
         let buf = new Uint8Array(this.params.length * 4);
         let dataview = new DataView(buf.buffer);
         this.params.forEach((p,i) => {
-            dataview.setUint32(i, p, true);
+            dataview.setUint32(i*4, p, true);
         });
         return buf;
     }
@@ -176,7 +259,8 @@ export class BaseResponse {
 }
 
 export class GenericResponse extends BaseResponse {
-    get cmdTag(): number {
+    static from(b: BaseResponse):GenericResponse { return new GenericResponse(b.header, b.params)}
+    get commandTag(): number {
         return this.params.params[1]
     }
 }

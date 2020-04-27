@@ -1,45 +1,110 @@
 
-import {NodeHid} from './hid'
+import fs from 'fs'
+import debug from 'debug'
+import {NodeHid} from './hid-nodehid'
 import {Client} from './client'
-import yargs = require('yargs')
+const { program } = require('commander');
 import { Property } from './types';
-const argv = yargs.options({
-    pid: { type: 'number', alias: 'p' },
-    vid: { type: 'number', alias: 'v' },
-  }).argv;
+import { toHex } from './util';
+// const argv = yargs.options({
+//     pid: { type: 'number', alias: 'p' },
+//     vid: { type: 'number', alias: 'v' },
+//   }).
+//   command('list', 'List memories.')
+//   .argv;
 
+program.version('0.0.1')
+    .option('-v, --vid <vid>', 'USB Vendor ID', '0x1fc9')
+    .option('-p, --pid <pid>', 'USB Product ID', '0x21')
+    .option('-V, --verbose', 'Output logs')
+    .option('-r, --report-size [size]', 'Set the HID report size (default 60)');
 
-function open_device(vid: number, pid: number) {
+program
+    .command('list')
+    .description('List memories on device.')
+    .action(async () => {
+        let memories = await getClient().getMemories()
+        console.log(memories)
+    });
 
-    var devices = HID.devices();
-    for (var i = 0; i < devices.length; i++){
-        var dev = devices[i];
-        // console.log(dev)
-        if (dev.vendorId == argv.vid && dev.productId == argv.pid) {
-            dev = new HID.HID(dev.path)
-            return dev
+program
+    .command('read <address> <length>')
+    .description('Read memory on the device.')
+    .option('-o, --output <output-file>', "Write read data to output file")
+    .action(async (address: string, length: string, options: any) => {
+        let memory = await getClient().readMemory(
+            parseInt(address), parseInt(length)
+        )
+        if (options.output){
+            fs.writeFileSync(options.output, memory, {flag: 'w+'});
+            console.log('Read ' + memory.length+ ' bytes.')
+        } else {
+            console.log('0x' + parseInt(address).toString(16) + ':')
+            console.log(toHex(memory))
         }
-    }
-    throw 'Could not find device'
+    });
+
+program
+    .command('write <address> <file>')
+    .description('Write binary data to address.')
+    .action(async (address: string, file: string) => {
+        let contents = fs.readFileSync(file, {flag: 'r'})
+        let client = await getClient()
+
+        var sector_size = (await client.getProperty(Property.FlashSectorSize))[0]
+        var erase_size = Math.ceil(contents.length/sector_size) * sector_size;
+        console.log('Erasing '+erase_size+ ' bytes')
+        await client.flashEraseRegion(parseInt(address), erase_size)
+        console.log('Writing ' + contents.length + ' bytes')
+        await client.writeMemory(parseInt(address), contents)
+
+        console.log(contents.length + ' bytes written.')
+    });
+
+program
+    .command('eraseSector <address> <length>')
+    .description('Erase flash.  Address and length should be block size aligned.')
+    .action(async (address: string, length: string) => {
+        let client = await getClient()
+
+        var sector_size = (await client.getProperty(Property.FlashSectorSize))[0]
+        var erase_size = Math.ceil(parseInt(length)/sector_size) * sector_size;
+
+        if (erase_size != parseInt(length)) {
+            console.log('Warning, aligning '+length+" to " + erase_size);
+        }
+
+        await client.flashEraseRegion(parseInt(address), erase_size)
+
+        console.log(erase_size+' bytes erased.')
+    });
+
+program
+    .command('massErase')
+    .description('Erase entire flash. ')
+    .action(async () => {
+        let client = await getClient().flashEraseAll()
+        console.log('Flash erased.');
+    });
+
+program
+    .command('reset')
+    .description('Perform a device soft reboot/reset.')
+    .action(async () => {
+        let client = await getClient().reset()
+        console.log('Device reset.');
+    });
+
+program.parse(process.argv)
+if (program.verbose) {
+    debug.enable('app:*')
 }
-// console.log(devices);
+// console.log(program)
 
-console.log(argv.vid)
-console.log(argv.pid)
-
-async function run () {
-    var dev = new NodeHid(argv.vid, argv.pid)
+function getClient() {
+    var dev = new NodeHid(program.vid, program.pid, 60)
     var client = new Client(dev)
-
-    var prop = await client.getProperty(Property.CurrentVersion)
-    console.log('prop',prop[0].toString(16))
-
-
-    var mems = await client.getMemories()
-    console.log('memories',mems)
-
-    var reset = await client.reset()
-    console.log('reset ',reset)
-
+    return client;
 }
-run()
+
+

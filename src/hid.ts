@@ -1,74 +1,45 @@
 // Hid wrapper
 // ideally multiple backends can be supported (nodejs, webusb).
 
-import { HID } from "node-hid";
+import debug from 'debug'
 import { BaseResponse } from "./types";
-import { toHex } from "./util";
 
-// class Device {
-//     path: string;
-//     vid: number;
-//     pid: number;
-//     device: object;
-//     constructor(path?: string, vid?: number, pid?: number, device?: object) {
-//         this.path = path || ''
-//         this.vid = vid || 0
-//         this.pid = pid || 0
-//         this.device = device || {}
-//     }
-// }
+var Log = debug('app:usb')
 
-function encodeReport(id: number, size: number, data: Uint8Array): Uint8Array {
-    var data_length = data.length < (size - 4) ? data.length : size - 4;
+export class HidReport {
+    data: Uint8Array;
+    id: number;
+    constructor (data: Uint8Array, id: number) {
+        this.data = data;
+        this.id = id;
+    }
+    static build(data: Uint8Array, id?: number): HidReport{
+        id = id || 0;
+        return new HidReport(data, id)
+    }
+}
+
+export function encodeReport(report: HidReport, size: number): Uint8Array {
+    var data_length = report.data.length < (size - 4) ? report.data.length : size - 4;
     var report_buf = new Uint8Array(size);
-    report_buf[0] = id;
+    report_buf[0] = report.id;
     report_buf[1] = 0;
     report_buf[2] = (data_length & 0xff) >> 0;
     report_buf[3] = (data_length & 0xff00) >> 8;
-    report_buf.set(data, 4);
+    report_buf.set(report.data.slice(0,data_length), 4);
     return report_buf;
 }
 
-function decodeReport(data: Uint8Array): Uint8Array{
+export function decodeReport(data: Uint8Array): HidReport{
     let id = data[0]
     let length = data[2] | (data[3] << 8);
 
     data = data.slice(4,length + 4)
-    return data
+    return HidReport.build(data, id)
 }
 export abstract class Hid {
-    abstract async read(a?: number): Promise<Uint8Array>;
-    abstract async write(reportId: number, a: Uint8Array): Promise<number>;
+    abstract async read(a?: number): Promise<HidReport>;
+    abstract async write(report: HidReport): Promise<number>;
 
     abstract close(): any;
-}
-
-export class NodeHid extends Hid {
-    dev: HID;
-    constructor(vid: number, pid: number) {
-        super()
-        this.dev = new HID(vid, pid);
-    }
-    async read(a?: number): Promise<Uint8Array> {
-        let buf = new Uint8Array(this.dev.readSync())
-        console.log('>>', toHex(buf));
-        return decodeReport(buf);
-    }
-
-    async write(reportId: number, a: Uint8Array, ): Promise<number> {
-        let buf = encodeReport(reportId, 64, a)
-
-        var count = this.dev.write(
-            Buffer.from(
-                buf
-            )
-        ) - 1 - 4;  // -1 because nodehid returns an extra 1, and -4 for the report header
-
-        console.log('<<(' + (count + 4) + ')', toHex(buf));
-        return count;
-    }
-
-    close(): any {
-        this.dev.close()
-    }
 }

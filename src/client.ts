@@ -1,13 +1,21 @@
-import {Hid} from './hid'
-import { CommandPacket, BaseResponse, Property, CommandTag, GetPropertyResponse, ErrorCode } from './types';
+import debug from 'debug'
+import {Hid, HidReport} from './hid'
+import { CommandPacket, BaseResponse, Property, 
+    CommandTag, GetPropertyResponse, ErrorCode, 
+    ReportId, GenericResponse, 
+    ReadMemoryResponse} from './types';
+import { combine } from './util';
 
+var Log = debug('app:log')
 
 
 function check_response(res: BaseResponse):boolean {
     if (res.success) {
         return true;
     } else {
-        throw "Error: " + ErrorCode[res.status] + "(" + res.status + ")"
+        if (res.status == undefined)
+            throw "Bootloader returned no parameters!"
+        throw "Bootloader Error: " + ErrorCode[res.status] + "(" + res.status + ")"
     }
 }
 
@@ -18,19 +26,12 @@ export class Client {
     }
 
     async sendRecv(cmd: CommandPacket): Promise<BaseResponse> {
-        // console.log('writing');
-        var total = 0;
-        let data = cmd.toBytes()
-        let toSend = data.length;
-        while (total < toSend) {
-            let sent = await this.hid.write(1, cmd.toBytes())
-            data = data.slice(sent,)
-            total += sent;
-        }
-        // console.log('wrote');
+
+        await this.hid.write(HidReport.build(cmd.toBytes(), 1))
+
         let res = await this.hid.read()
-        // console.log('read');
-        let parsed_res = BaseResponse.fromBytes(res);
+        let parsed_res = BaseResponse.fromBytes(res.data);
+
         check_response(parsed_res)
         return parsed_res
     }
@@ -42,8 +43,48 @@ export class Client {
         return res
     }
 
+    async sendData(data: Uint8Array): Promise<boolean> {
+        var status = ErrorCode.Fail;
+        var total = 0;
+        let toSend = data.length;
+        while (total < toSend) {
+            Log('writing ' + total + ' / ' + toSend);
+            let sent = await this.hid.write(HidReport.build(data, 2))
+            data = data.slice(sent,)
+            total += sent;
+        }
+        let res = await this.hid.read()
+        let parsed_res = BaseResponse.fromBytes(res.data);
+        check_response(parsed_res)
+
+        return parsed_res.success
+    }
+
+    async readData(tag: number, length: number): Promise<Uint8Array> {
+        var data = new Uint8Array()
+        var status = ErrorCode.Fail;
+        while (true) {
+            let res = await this.hid.read()
+
+            if (res.id == ReportId.CommandIn) {
+                let end = GenericResponse.from(BaseResponse.fromBytes(res.data))
+                status = end.status
+                if (end.commandTag == tag) {
+                    break
+                }
+            } else {
+                data = combine(data, res.data)
+            }
+        }
+        if (data.length < length) {
+            Log(data)
+            throw 'Error: got less data than expected.'
+        }
+        return data
+    }
+
     async getProperty(prop: Property, index?: number): Promise<number[]> {
-        console.log('get property ',Property[prop])
+        Log('get property ',Property[prop])
         index = index || 0;
         let pkt = CommandPacket.build(CommandTag.GetProperty, 0, [prop, index])
         let res = await this.sendRecv(pkt)
@@ -57,7 +98,7 @@ export class Client {
     }
 
     async setProperty(prop: Property, value: number): Promise<boolean> {
-        console.log('set property ',Property[prop])
+        Log('set property ',Property[prop])
         let pkt = CommandPacket.build(CommandTag.SetProperty, 0, [prop, value])
         let res = await this.sendRecv(pkt)
         return res.success
@@ -71,6 +112,7 @@ export class Client {
             this.hid.close();
             return true
         }
+ 
         return false
     }
 
@@ -85,13 +127,13 @@ export class Client {
         index = index || 0;
         return (await this.buildSendRecv(CommandTag.FlashEraseAll, 0, [index])).status
     }
-    async flashEraseRegion(address: number, length:number, index?: number) {
+    async flashEraseRegion(address: number, length:number, index?: number): Promise <boolean> {
         index = index || 0;
-        return (await this.buildSendRecv(CommandTag.FlashEraseRegion, 0, [address, length, index])).status
+        return (await this.buildSendRecv(CommandTag.FlashEraseRegion, 0, [address, length, index])).success
     }
 
-    async getMemories(): object {
-        var memories = {'internal_flash': {}, 'internal_ram': {}}
+    async getMemories(): Promise<any> {
+        var memories: any = {'internal_flash': {}, 'internal_ram': {}}
         var index = 0;
         var startAddress = 0;
         while (true) {
@@ -139,5 +181,20 @@ export class Client {
         }
 
         return memories
+    }
+
+    async readMemory (address: number, length: number, index?: number): Promise<Uint8Array> {
+        index = index || 0;
+        
+        let res = await this.buildSendRecv(CommandTag.ReadMemory, 0, [address, length, index])
+
+        let dataToRead = ReadMemoryResponse.from(res).length
+        return this.readData(CommandTag.ReadMemory, dataToRead)
+    }
+    async writeMemory (address: number, data: Uint8Array, index?: number): Promise<boolean> {
+        index = index || 0;
+        let res = await this.buildSendRecv(CommandTag.WriteMemory, 0, [address, data.length, index])
+
+        return this.sendData(data)
     }
 }
