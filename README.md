@@ -38,5 +38,5 @@ npm run dev -- reset
 
 # Acknowledgements / other projects
 
-Check out [pyMBoot](https://github.com/molejar/pyMBoot)
+Thank you to [pyMBoot](https://github.com/molejar/pyMBoot) (by @molejar), which is a more capable tool based on Python.
 
