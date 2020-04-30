@@ -19,6 +19,19 @@ export class HidReport {
     }
 }
 
+export class Device {
+    handle: any;
+    product_name: string;
+    path: string;
+    serial_number: string;
+    constructor(handle: any,  path: string, product_name: string, serial_number?: string){
+        this.handle = handle;
+        this.product_name = product_name;
+        this.path = path;
+        this.serial_number = serial_number || "";
+    }
+}
+
 export function encodeReport(report: HidReport, size: number): Uint8Array {
     var data_length = report.data.length < (size - 4) ? report.data.length : size - 4;
     var report_buf = new Uint8Array(size);
@@ -38,8 +51,11 @@ export function decodeReport(data: Uint8Array): HidReport{
     return HidReport.build(data, id)
 }
 export abstract class Hid {
+    handle?: any;
     abstract async read(a?: number): Promise<HidReport>;
     abstract async write(report: HidReport): Promise<number>;
+    // should be static method
+    // abstract async enumerate(vid?: number, pid?: number): Promise<Device[]>;
 
-    abstract close(): any;
+    abstract async close(): Promise<any>;
 }

@@ -6,12 +6,6 @@ import {Client} from './client'
 const { program } = require('commander');
 import { Property } from './types';
 import { toHex } from './util';
-// const argv = yargs.options({
-//     pid: { type: 'number', alias: 'p' },
-//     vid: { type: 'number', alias: 'v' },
-//   }).
-//   command('list', 'List memories.')
-//   .argv;
 
 program.version('0.0.1')
     .option('-v, --vid <vid>', 'USB Vendor ID', '0x1fc9')
@@ -21,6 +15,21 @@ program.version('0.0.1')
 
 program
     .command('list')
+    .description('List devices.')
+    .action(async () => {
+        let devices = await Client.enumerate(
+            async () => {
+                return await NodeHid.enumerate(0x1fc9, 0x21)
+            },
+            async (handle?: any) => {
+                return await NodeHid.openPath(handle, 60);
+            }
+        )
+        console.log(devices);
+    });
+
+program
+    .command('mlist')
     .description('List memories on device.')
     .action(async () => {
         let memories = await getClient().getMemories()

@@ -1,13 +1,28 @@
 import debug from 'debug'
-import {Hid, HidReport} from './hid'
+import {Hid, HidReport, Device} from './hid'
 import { CommandPacket, BaseResponse, Property, 
     CommandTag, GetPropertyResponse, ErrorCode, 
     ReportId, GenericResponse, 
-    ReadMemoryResponse} from './types';
-import { combine } from './util';
+    ReadMemoryResponse,
+    Params} from './types';
+import { toHex,combine } from './util';
 
 var Log = debug('app:log')
 
+export class MbootDevice extends Device {
+    uniqueDeviceId: string;
+    constructor(device: Device, code: string) {
+        super(device.handle, device.path, device.product_name, device.serial_number)
+        this.uniqueDeviceId= code;
+    }
+    static build(handle: any, path: string, name: string, serial_number: string, uuid: string){
+        let dev = new Device(handle,path,name,serial_number);
+        return new MbootDevice(dev, uuid);
+    }
+    get uniqueId(): string {
+        return this.uniqueDeviceId;
+    }
+}
 
 function check_response(res: BaseResponse):boolean {
     if (res.success) {
@@ -109,7 +124,7 @@ export class Client {
         let res = await this.sendRecv(pkt)
 
         if (res.success) {
-            this.hid.close();
+            await this.hid.close();
             return true
         }
  
@@ -196,5 +211,24 @@ export class Client {
         let res = await this.buildSendRecv(CommandTag.WriteMemory, 0, [address, data.length, index])
 
         return this.sendData(data)
+    }
+
+    static async enumerate(
+        enumerate: () => Promise<Device[]>, 
+        open: (handle?:any) => Promise<Hid>, 
+        ): Promise<MbootDevice[]> {
+        
+        var mbootdevs = [];
+        let devs = await enumerate();
+        for (var i = 0; i < devs.length; i++) {
+            let dev = await open(devs[i].handle);
+            let client = new Client(dev);
+            let res = await client.getProperty(Property.UniqueDeviceId);
+            let id = toHex(new Params(res).toBytes()).replace(/ /g,'');
+            await dev.close();
+            let mdev = new MbootDevice(devs[i], id);
+            mbootdevs.push(mdev)
+        }
+        return mbootdevs
     }
 }
