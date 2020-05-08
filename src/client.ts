@@ -1,8 +1,8 @@
 import debug from 'debug'
 import {Hid, HidReport, Device} from './hid'
-import { CommandPacket, BaseResponse, Property, 
-    CommandTag, GetPropertyResponse, ErrorCode, 
-    ReportId, GenericResponse, 
+import { CommandPacket, BaseResponse, Property,
+    CommandTag, GetPropertyResponse, ErrorCode,
+    ReportId, GenericResponse,
     ReadMemoryResponse,
     Params} from './types';
 import { toHex,combine } from './util';
@@ -10,17 +10,12 @@ import { toHex,combine } from './util';
 var Log = debug('app:log')
 
 export class MbootDevice extends Device {
-    uniqueDeviceId: string;
     constructor(device: Device, code: string) {
-        super(device.handle, device.path, device.product_name, device.serial_number)
-        this.uniqueDeviceId= code;
+        super(device.handle, device.path, device.product_name, code)
     }
     static build(handle: any, path: string, name: string, serial_number: string, uuid: string){
         let dev = new Device(handle,path,name,serial_number);
         return new MbootDevice(dev, uuid);
-    }
-    get uniqueId(): string {
-        return this.uniqueDeviceId;
     }
 }
 
@@ -127,7 +122,7 @@ export class Client {
             await this.hid.close();
             return true
         }
- 
+
         return false
     }
 
@@ -162,7 +157,7 @@ export class Client {
             let internal = memories['internal_flash']
             internal[index] = {}
             internal[index]['address'] = addresses[0]
-            
+
             let sizes = await this.getProperty(Property.FlashSize, index)
             if (sizes.length == 0) break;
             internal[index]['size'] = sizes[0]
@@ -187,7 +182,7 @@ export class Client {
             let internal = memories['internal_ram']
             internal[index] = {}
             internal[index]['address'] = addresses[0]
-            
+
             let sizes = await this.getProperty(Property.RamSize, index)
             if (sizes.length == 0) break;
             internal[index]['size'] = sizes[0]
@@ -200,7 +195,7 @@ export class Client {
 
     async readMemory (address: number, length: number, index?: number): Promise<Uint8Array> {
         index = index || 0;
-        
+
         let res = await this.buildSendRecv(CommandTag.ReadMemory, 0, [address, length, index])
 
         let dataToRead = ReadMemoryResponse.from(res).length
@@ -214,16 +209,17 @@ export class Client {
     }
 
     static async enumerate(
-        enumerate: () => Promise<Device[]>, 
-        open: (handle?:any) => Promise<Hid>, 
+        enumerate: () => Promise<Device[]>,
+        open: (handle?:any) => Promise<Hid>,
         ): Promise<MbootDevice[]> {
-        
-        var mbootdevs = [];
+
+        var mbootdevs: MbootDevice[] = [];
         let devs = await enumerate();
         for (var i = 0; i < devs.length; i++) {
             let dev = await open(devs[i].handle);
             let client = new Client(dev);
             let res = await client.getProperty(Property.UniqueDeviceId);
+            // console.log('uuid', res)
             let id = toHex(new Params(res).toBytes()).replace(/ /g,'');
             await dev.close();
             let mdev = new MbootDevice(devs[i], id);

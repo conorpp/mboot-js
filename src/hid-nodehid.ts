@@ -56,7 +56,7 @@ export class NodeHid extends Hid {
         vid = vid || 0;
         pid = pid || 0;
         var devs = devices();
-        var filtered = []
+        var filtered: Device[] = []
 
         for (var i = 0; i < devs.length ; i++) {
             if (vid && devs[i].vendorId != vid)
