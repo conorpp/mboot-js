@@ -22,12 +22,12 @@ export class HidReport {
 export class Device {
     handle: any;
     product_name: string;
-    path: string;
+    locationId: string;
     serial_number: string;
-    constructor(handle: any,  path: string, product_name: string, serial_number?: string){
+    constructor(handle: any,  locationId: string, product_name: string, serial_number?: string){
         this.handle = handle;
         this.product_name = product_name;
-        this.path = path;
+        this.locationId = locationId;
         this.serial_number = serial_number || "";
     }
 }

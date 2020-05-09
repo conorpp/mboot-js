@@ -11,6 +11,7 @@
     "t": "ts-node-dev ",
     "prod": "tsc && node ./build/app.js",
     "tsc": "tsc",
+    "build-electron": "./node_modules/.bin/electron-rebuild",
     "build": "tsc"
   },
   "test": "echo \"Error: no test specified\" && exit 1",
@@ -41,6 +42,7 @@
   "devDependencies": {
     "@types/node": "^13.13.2",
     "@types/yargs": "^15.0.4",
+    "electron-rebuild": "^1.10.1",
     "webpack": "^4.43.0",
     "webpack-cli": "^3.3.11"
   }

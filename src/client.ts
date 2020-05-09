@@ -9,12 +9,17 @@ import { toHex,combine } from './util';
 
 var Log = debug('app:log')
 
+const sleep = (milliseconds: number) => {
+    return new Promise(resolve => setTimeout(resolve, milliseconds))
+  }
+
+
 export class MbootDevice extends Device {
     constructor(device: Device, code: string) {
-        super(device.handle, device.path, device.product_name, code)
+        super(device.handle, device.locationId, device.product_name, code)
     }
-    static build(handle: any, path: string, name: string, serial_number: string, uuid: string){
-        let dev = new Device(handle,path,name,serial_number);
+    static build(handle: any, locationId: string, name: string, serial_number: string, uuid: string){
+        let dev = new Device(handle,locationId,name,serial_number);
         return new MbootDevice(dev, uuid);
     }
 }
@@ -31,8 +36,18 @@ function check_response(res: BaseResponse):boolean {
 
 export class Client {
     hid: Hid;
+    _onProgress: ((progress: number)=>void)[];
     constructor(hid : Hid) {
         this.hid = hid;
+        this._onProgress = [];
+    }
+
+    async close(){
+        await this.hid.close();
+    }
+
+    onProgress(cb: (progress: number)=>void) {
+        this._onProgress.push(cb);
     }
 
     async sendRecv(cmd: CommandPacket): Promise<BaseResponse> {
@@ -57,22 +72,32 @@ export class Client {
         var status = ErrorCode.Fail;
         var total = 0;
         let toSend = data.length;
+        this._onProgress.forEach(f=>f(0.0));
+        var _throttle = 0;
         while (total < toSend) {
             Log('writing ' + total + ' / ' + toSend);
             let sent = await this.hid.write(HidReport.build(data, 2))
             data = data.slice(sent,)
             total += sent;
+            _throttle += 1;
+            if (_throttle % 25 == 0)
+                this._onProgress.forEach(f => f(total / toSend));
         }
+        console.log('reading..')
+        // throw 'nope'
         let res = await this.hid.read()
+        console.log('read.')
         let parsed_res = BaseResponse.fromBytes(res.data);
         check_response(parsed_res)
 
+        this._onProgress.forEach(f => f(1));
         return parsed_res.success
     }
 
     async readData(tag: number, length: number): Promise<Uint8Array> {
         var data = new Uint8Array()
         var status = ErrorCode.Fail;
+        this._onProgress.forEach(f=>f(0));
         while (true) {
             let res = await this.hid.read()
 
@@ -85,6 +110,7 @@ export class Client {
             } else {
                 data = combine(data, res.data)
             }
+            this._onProgress.forEach(f=>f(data.length/length));
         }
         if (data.length < length) {
             Log(data)
