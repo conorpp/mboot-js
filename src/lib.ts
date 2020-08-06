@@ -1,6 +1,6 @@
 import {Client, MbootDevice} from './client'
 import {NodeHid} from './hid-nodehid'
-import {Property, CommandTag, ErrorCode, Params, BaseResponse, CommandPacket} from './types';
+import {Property, CommandTag, ErrorCode, Params, BaseResponse, CommandPacket, Header} from './types';
 import {toHex} from './util'
 import {Hid, HidReport, Device, decodeReport, encodeReport} from './hid'
 
@@ -18,6 +18,7 @@ export {
     Device,
     Params,
     BaseResponse,
+    Header,
     decodeReport,
     encodeReport,
 }

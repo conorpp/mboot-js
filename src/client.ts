@@ -29,7 +29,9 @@ function check_response(res: BaseResponse):boolean {
         return true;
     } else {
         if (res.status == undefined)
+        {
             throw "Bootloader returned no parameters!"
+        }
         throw "Bootloader Error: " + ErrorCode[res.status] + "(" + res.status + ")"
     }
 }
@@ -83,10 +85,8 @@ export class Client {
             if (_throttle % 25 == 0)
                 this._onProgress.forEach(f => f(total / toSend));
         }
-        console.log('reading..')
         // throw 'nope'
         let res = await this.hid.read()
-        console.log('read.')
         let parsed_res = BaseResponse.fromBytes(res.data);
         check_response(parsed_res)
 
@@ -245,7 +245,6 @@ export class Client {
             let dev = await open(devs[i].handle);
             let client = new Client(dev);
             let res = await client.getProperty(Property.UniqueDeviceId);
-            // console.log('uuid', res)
             let id = toHex(new Params(res).toBytes()).replace(/ /g,'');
             await dev.close();
             let mdev = new MbootDevice(devs[i], id);
