@@ -1,8 +1,7 @@
 {
   "name": "mboot",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Library for using NXP bootloaders",
-  "private": true,
   "main": "src/lib.js",
   "types": "./src/lib.d.ts",
   "scripts": {
@@ -24,7 +23,7 @@
     "MCUBOOT",
     "LPC55"
   ],
-  "author": "Conor Patrick",
+  "author": "Conor Patrick <conor@solokeys.com>",
   "bugs": {
     "url": "https://github.com/conorpp/mboot-js/issues"
   },

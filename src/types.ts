@@ -159,6 +159,17 @@ export enum ReportId {
     DataIn = 0x04,
 }
 
+export enum KeyProvOperation {
+    Enroll = 0,
+    SetUserKey = 1,
+    SetIntrinsicKey = 2,
+    WriteNonVolatile = 3,
+    ReadNonVolatile = 4,
+    WriteKeyStore = 5,
+    ReadKeyStore = 6,
+}
+
+
 export class Header {
     tag: number;
     flags: number;

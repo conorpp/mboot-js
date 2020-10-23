@@ -4,7 +4,7 @@ import { CommandPacket, BaseResponse, Property,
     CommandTag, GetPropertyResponse, ErrorCode,
     ReportId, GenericResponse,
     ReadMemoryResponse,
-    Params} from './types';
+    Params, KeyProvOperation} from './types';
 import { toHex,combine } from './util';
 
 var Log = debug('app:log')
@@ -166,6 +166,22 @@ export class Client {
     async flashEraseRegion(address: number, length:number, index?: number): Promise <boolean> {
         index = index || 0;
         return (await this.buildSendRecv(CommandTag.FlashEraseRegion, 0, [address, length, index])).success
+    }
+
+    async enroll(): Promise<boolean> {
+        let pkt = CommandPacket.build(CommandTag.KeyProvisioning, 0, [KeyProvOperation.Enroll]);
+        let res = await this.sendRecv(pkt);
+        return res.success;
+    }
+
+    async setUserKey(key_type: number, key_data: Uint8Array): Promise<boolean> {
+        let pkt = CommandPacket.build(CommandTag.KeyProvisioning, 1, [KeyProvOperation.SetUserKey, key_type, key_data.length]);
+        let res = await this.sendRecv(pkt);
+        if ( res.success ) {
+            return this.sendData(key_data);
+        } else {
+            return false;
+        }
     }
 
     async getMemories(): Promise<any> {
