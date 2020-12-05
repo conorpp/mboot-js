@@ -177,11 +177,65 @@ export class Client {
     async setUserKey(key_type: number, key_data: Uint8Array): Promise<boolean> {
         let pkt = CommandPacket.build(CommandTag.KeyProvisioning, 1, [KeyProvOperation.SetUserKey, key_type, key_data.length]);
         let res = await this.sendRecv(pkt);
+
         if ( res.success ) {
             return this.sendData(key_data);
+
         } else {
             return false;
         }
+    }
+
+    async generateDeviceKey(key_type: number, key_size:  number): Promise<boolean> {
+        let pkt = CommandPacket.build(CommandTag.KeyProvisioning, 0, [KeyProvOperation.SetIntrinsicKey, key_type, key_size]);
+        let res = await this.sendRecv(pkt);
+        if ( res.success ) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    async write_keys_non_volatile(mem_id: number): Promise<boolean> {
+        let pkt = CommandPacket.build(CommandTag.KeyProvisioning, 0, [KeyProvOperation.WriteNonVolatile, mem_id]);
+        let res = await this.sendRecv(pkt);
+        return res.success;
+    }
+
+    async read_keystore(mem_id: number): Promise<Uint8Array> {
+        let pkt = CommandPacket.build(CommandTag.KeyProvisioning, 0, [KeyProvOperation.ReadKeyStore]);
+        let res = await this.sendRecv(pkt);
+        if ( res.success ) {
+            let dataToRead = ReadMemoryResponse.from(res).length
+            return this.readData(CommandTag.KeyProvisioning, dataToRead);
+        } else {
+            throw 'Could not read keystore'
+        }
+    }
+
+    async configure_memory(address: number, mem_id: number): Promise<boolean> {
+        let pkt = CommandPacket.build(CommandTag.ConfigureMemory, 0, [mem_id, address]);
+        let res = await this.sendRecv(pkt);
+        return res.success;
+    }
+
+    // async write_memory(address: number, data: Uint8Array, mem_id: number): Promise<boolean> {
+    //     let pkt = CommandPacket.build(CommandTag.WriteMemory, 0, [address,data.length, mem_id]);
+    //     let res = await this.sendRecv(pkt);
+    //     if ( res.success ) {
+    //         return this.sendData(data);
+    //     } else {
+    //         return false;
+    //     }
+    // }
+
+    async write_words(address: number, data: Uint32Array, mem_id: number){
+        let buf = new Uint8Array(data.length * 4);
+        let dataview = new DataView(buf.buffer);
+        data.forEach((p,i) => {
+            dataview.setUint32(i*4, p, true);
+        });
+        return this.writeMemory(address, buf, mem_id);
     }
 
     async getMemories(): Promise<any> {
@@ -248,6 +302,17 @@ export class Client {
         let res = await this.buildSendRecv(CommandTag.WriteMemory, 0, [address, data.length, index])
 
         return this.sendData(data)
+    }
+
+    async receive_sb (data: Uint8Array): Promise<boolean> {
+        let res = await this.buildSendRecv(CommandTag.RecieveSbFile, 1, [data.length]);
+
+        if ( res.success ) {
+            // return this.sendData(CommandTag.RecieveSbFile, data);
+            return this.sendData(data);
+        } else {
+            throw 'Could not write sb file'
+        }
     }
 
     static async enumerate(

@@ -1,6 +1,6 @@
 {
   "name": "mboot",
-  "version": "0.0.1",
+  "version": "0.0.4",
   "description": "Library for using NXP bootloaders",
   "main": "src/lib.js",
   "types": "./src/lib.d.ts",

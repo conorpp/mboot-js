@@ -71,6 +71,103 @@ program
     });
 
 program
+    .command('write-words <address> [words...]')
+    .description('Write words to address.')
+    .action(async (address: string, words: string[]) => {
+        let client = await getClient()
+
+        let parsed_words: number[] = [];
+        for (let i = 0; i < words.length; i++) {
+            parsed_words.push(parseInt(words[i]));
+        }
+
+        await client.write_words(parseInt(address), Uint32Array.from(parsed_words), 0);
+
+        console.log('Wrote words');
+    });
+
+program
+    .command('configure <mem-id> <address>')
+    .description('Run configure memory command.')
+    .action(async (mem_id: string, address: string) => {
+        let client = await getClient()
+
+        await client.configure_memory(parseInt(address), parseInt(mem_id));
+
+        console.log('Configured mem');
+    });
+
+program
+    .command('set-key <key-type> <key-hex>')
+    .description('Write a known key to the device.')
+    .action(async (key_type: string, key_data: string) => {
+        let client = await getClient()
+
+        let data = Uint8Array.from(Buffer.from(key_data, 'hex'));
+        let r = await client.setUserKey(parseInt(key_type), data);
+
+        console.log('Wrote key', r);
+    });
+
+program
+    .command('gen-key <key-type> <key-length>')
+    .description('Generate a key on the device.')
+    .action(async (key_type: string, key_length: string) => {
+        let client = await getClient()
+
+        await client.generateDeviceKey(parseInt(key_type), parseInt(key_length));
+
+        console.log('generated key');
+    });
+
+program
+    .command('enroll')
+    .description('Enroll the PUF.')
+    .action(async () => {
+        let client = await getClient()
+
+        await client.enroll();
+
+        console.log('Enrolled PUF');
+    });
+
+program
+    .command('write-nvm <mem-id>')
+    .description('Write the keystore to nvm memory.')
+    .action(async (mem_id:string) => {
+        let client = await getClient()
+
+        await client.write_keys_non_volatile(parseInt(mem_id));
+
+        console.log('Wrote keystore');
+    });
+
+program
+    .command('read-key-store <file.bin>')
+    .description('Read keystore to file.')
+    .action(async (filename:string) => {
+        let client = await getClient()
+
+        let memory = await client.read_keystore(0);
+        fs.writeFileSync(filename, memory, {flag: 'w+'});
+
+        console.log('read keystore to ' + filename);
+    });
+
+program
+    .command('receive-sb <file.sb2>')
+    .description('Write sb2 file to device.')
+    .action(async (filename:string) => {
+        let client = await getClient()
+
+        let contents = fs.readFileSync(filename);
+
+        await client.receive_sb(Uint8Array.from(contents));
+
+    });
+
+
+program
     .command('eraseSector <address> <length>')
     .description('Erase flash.  Address and length should be block size aligned.')
     .action(async (address: string, length: string) => {
@@ -111,9 +208,16 @@ if (program.verbose) {
 // console.log(program)
 
 function getClient() {
-    var dev = new NodeHid(program.vid, program.pid, 60)
-    var client = new Client(dev)
-    return client;
+    try {
+        var dev = new NodeHid(program.vid, program.pid, 60)
+        var client = new Client(dev)
+        return client;
+    } catch(e) {
+        var dev = new NodeHid(0x1209, 0xb000, 60)
+        var client = new Client(dev)
+        return client;
+
+    }
 }
 
 
