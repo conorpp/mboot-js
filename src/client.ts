@@ -105,7 +105,7 @@ export class Client {
                 let end = GenericResponse.from(BaseResponse.fromBytes(res.data))
                 status = end.status
                 if (end.commandTag == tag) {
-                    break
+                    break;
                 }
             } else {
                 data = combine(data, res.data)

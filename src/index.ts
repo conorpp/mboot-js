@@ -60,8 +60,9 @@ program
         let contents = fs.readFileSync(file, {flag: 'r'})
         let client = await getClient()
 
-        var sector_size = (await client.getProperty(Property.FlashSectorSize))[0]
-        var erase_size = Math.ceil(contents.length/sector_size) * sector_size;
+        // var sector_size = (await client.getProperty(Property.FlashSectorSize))[0]
+        // var erase_size = Math.ceil(contents.length/sector_size) * sector_size;
+	var erase_size = contents.length;
         console.log('Erasing '+erase_size+ ' bytes')
         await client.flashEraseRegion(parseInt(address), erase_size)
         console.log('Writing ' + contents.length + ' bytes')
@@ -186,6 +187,28 @@ program
     });
 
 program
+    .command('erase <address> <length>')
+    .description('Erase flash.  Address and length should be block size aligned.')
+    .action(async (address: string, length: string) => {
+        let client = await getClient()
+
+        await client.flashEraseRegion(parseInt(address), parseInt(length))
+
+        console.log(length +' bytes erased.')
+    });
+
+program
+    .command('raw-write <address> <hex-data>')
+    .description('Write flash without erasing first.')
+    .action(async (address: string, data: string) => {
+        let client = await getClient()
+
+        await client.writeMemory(parseInt(address), Uint8Array.from(Buffer.from(data,'hex')))
+
+        console.log(data.length/2 +' bytes erased.')
+    });
+
+program
     .command('massErase')
     .description('Erase entire flash. ')
     .action(async () => {
@@ -201,11 +224,11 @@ program
         console.log('Device reset.');
     });
 
-program.parse(process.argv)
-if (program.verbose) {
+program.on('option:verbose', function () {
     debug.enable('app:*')
-}
-// console.log(program)
+});
+
+program.parse(process.argv)
 
 function getClient() {
     try {

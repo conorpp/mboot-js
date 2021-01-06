@@ -1,9 +1,9 @@
 {
   "name": "mboot",
-  "version": "0.0.5",
+  "version": "0.0.8",
   "description": "Library for using NXP bootloaders",
-  "main": "src/lib.js",
-  "types": "./src/lib.d.ts",
+  "main": "./dist/lib.js",
+  "types": "./dist/lib.d.ts",
   "scripts": {
     "loop": "ts-node-dev --respawn --transpileOnly --clear ./src/index.ts",
     "dev": "ts-node-dev --transpileOnly --clear ./src/index.ts",
