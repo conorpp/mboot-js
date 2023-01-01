@@ -42,7 +42,7 @@
     "@types/node": "^13.13.2",
     "@types/yargs": "^15.0.4",
     "electron-rebuild": "^1.10.1",
-    "webpack": "^4.43.0",
-    "webpack-cli": "^3.3.11"
+    "webpack": "^5.75.0",
+    "webpack-cli": "^5.0.1"
   }
 }
